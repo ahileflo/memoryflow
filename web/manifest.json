@@ -1,0 +1,12 @@
+{
+  "name": "MemoryFlow",
+  "short_name": "MemoryFlow",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0E0B1C",
+  "theme_color": "#1B1533",
+  "description": "AI memory concierge + personalized gift marketplace.",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false,
+  "icons": []
+}

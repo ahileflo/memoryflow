@@ -1,0 +1,47 @@
+# Supabase local development config.
+# Regenerate with `supabase init` if your CLI version expects a different schema.
+# Production: provision the hosted project in an EU region for data residency.
+
+project_id = "memoryflow"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[storage]
+enabled = true
+# Thumbnails only — never originals.
+file_size_limit = "10MiB"
+
+[auth]
+enabled = true
+# For web dev. Update to your deployed origin in production.
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000", "io.memoryflow://login-callback"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+# Easier local testing; require confirmation in production.
+enable_confirmations = false
+
+# Google sign-in. Secrets come from env vars — never commit real values.
+[auth.external.google]
+enabled = true
+client_id = "env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_GOOGLE_SECRET)"
+# Photos/Gmail read-only scopes are requested at import time (Milestone 3),
+# not at sign-in.

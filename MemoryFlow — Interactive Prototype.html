@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MemoryFlow — Interactive Prototype</title>
+<style>
+  :root{
+    --indigo:#1B1533; --indigo2:#27204A; --violet:#6C5CE7; --violet-d:#4A3B8C;
+    --coral:#FF7A59; --amber:#FFB454; --mint:#2EC4B6; --ink:#252140;
+    --muted:#7A7690; --panel:#F4F2FB; --line:#E4E0F2; --bg:#0E0B1C;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:
+      radial-gradient(1200px 600px at 20% -10%, #2a2150 0%, transparent 60%),
+      radial-gradient(900px 500px at 100% 110%, #3a2440 0%, transparent 55%),
+      #0E0B1C;
+    color:var(--ink);
+    display:flex; align-items:center; justify-content:center; gap:46px;
+    min-height:100%; padding:40px 20px; flex-wrap:wrap;
+  }
+  /* ---------- phone shell ---------- */
+  .phone{
+    position:relative; width:390px; height:844px; background:#fff; border-radius:46px;
+    box-shadow:0 30px 80px rgba(0,0,0,.55), 0 0 0 12px #14101f, 0 0 0 14px #2a2342;
+    overflow:hidden; flex:0 0 auto;
+  }
+  .notch{position:absolute; top:0; left:50%; transform:translateX(-50%); width:150px; height:30px;
+    background:#14101f; border-radius:0 0 18px 18px; z-index:60;}
+  .statusbar{position:absolute; top:0; left:0; right:0; height:44px; z-index:55;
+    display:flex; align-items:center; justify-content:space-between; padding:14px 26px 0; font-size:13px; font-weight:600;}
+  .statusbar .right{display:flex; gap:6px; align-items:center;}
+  .statusbar.dark{color:#fff;} .statusbar.light{color:var(--ink);}
+  .viewport{position:absolute; inset:0; }
+  .screen{position:absolute; inset:0; display:none; flex-direction:column; background:#fff;}
+  .screen.active{display:flex; animation:fade .35s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;}}
+  .body{flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;}
+  .body::-webkit-scrollbar{display:none;}
+  .pad{padding:0 22px;}
+  /* ---------- generic ---------- */
+  .eyebrow{font-size:11px; font-weight:800; letter-spacing:2.4px; text-transform:uppercase; color:var(--coral);}
+  h1{font-size:30px; line-height:1.12; letter-spacing:-.5px; font-weight:800; color:var(--ink);}
+  h2{font-size:21px; font-weight:800; color:var(--ink); letter-spacing:-.3px;}
+  .sub{color:var(--muted); font-size:14.5px; line-height:1.5;}
+  .btn{display:flex; align-items:center; justify-content:center; gap:8px; width:100%; border:none;
+    border-radius:16px; padding:16px; font-size:16px; font-weight:700; cursor:pointer; transition:transform .12s, filter .12s;}
+  .btn:active{transform:scale(.975);}
+  .btn-primary{background:var(--coral); color:#fff; box-shadow:0 10px 24px rgba(255,122,89,.4);}
+  .btn-dark{background:var(--indigo); color:#fff;}
+  .btn-ghost{background:var(--panel); color:var(--ink);}
+  .btn[disabled]{opacity:.4; pointer-events:none; box-shadow:none;}
+  .chip{display:inline-flex; align-items:center; gap:6px; background:var(--panel); color:var(--violet-d);
+    font-size:12px; font-weight:700; padding:6px 11px; border-radius:999px;}
+  .tile{border-radius:14px; object-fit:cover; display:block; background:linear-gradient(135deg,var(--violet),var(--coral));}
+  /* ---------- welcome ---------- */
+  #welcome{background:var(--indigo);}
+  .mosaic{display:grid; grid-template-columns:repeat(4,1fr); gap:9px;}
+  .mosaic div{aspect-ratio:1; border-radius:12px;}
+  /* ---------- bottom nav ---------- */
+  .nav{display:flex; justify-content:space-around; align-items:center; padding:10px 8px 26px;
+    border-top:1px solid var(--line); background:#fff;}
+  .nav button{background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px;
+    font-size:10.5px; font-weight:700; color:var(--muted); padding:4px 10px;}
+  .nav button.active{color:var(--coral);}
+  .nav .ico{width:24px; height:24px; display:grid; place-items:center; font-size:19px;}
+  /* ---------- cards ---------- */
+  .albumcard{position:relative; border-radius:20px; overflow:hidden; cursor:pointer; aspect-ratio:1; box-shadow:0 8px 20px rgba(27,21,51,.12);}
+  .albumcard img{width:100%; height:100%; object-fit:cover; display:block;}
+  .albumcard .ov{position:absolute; inset:0; background:linear-gradient(180deg,transparent 40%, rgba(20,16,36,.82));}
+  .albumcard .meta{position:absolute; left:13px; right:13px; bottom:11px; color:#fff;}
+  .albumcard .meta .t{font-weight:800; font-size:15px;}
+  .albumcard .meta .c{font-size:11.5px; opacity:.85;}
+  .badge{position:absolute; top:10px; left:10px; background:rgba(255,255,255,.92); color:var(--violet-d);
+    font-size:10px; font-weight:800; padding:4px 8px; border-radius:8px; backdrop-filter:blur(4px);}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:13px;}
+  .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:7px;}
+  /* product */
+  .prodcard{border:1px solid var(--line); border-radius:20px; overflow:hidden; background:#fff;}
+  .prodcard .top{aspect-ratio:4/3; position:relative; background:var(--panel);}
+  .prodcard .top img{width:100%; height:100%; object-fit:cover;}
+  .prodcard .info{padding:14px 15px 16px;}
+  .price{font-weight:800; color:var(--ink);}
+  .row{display:flex; align-items:center; gap:12px;}
+  .provider{display:flex; align-items:center; gap:13px; padding:14px; border:1.5px solid var(--line); border-radius:16px; cursor:pointer; transition:.15s; background:#fff;}
+  .provider:active{transform:scale(.99);}
+  .provider.on{border-color:var(--mint); background:#F0FBF9;}
+  .provider .logo{width:42px; height:42px; border-radius:11px; display:grid; place-items:center; font-size:20px; color:#fff; font-weight:800; flex:0 0 auto;}
+  .provider .toggle{margin-left:auto; width:26px; height:26px; border-radius:50%; border:2px solid var(--line); display:grid; place-items:center; color:#fff; font-size:14px;}
+  .provider.on .toggle{background:var(--mint); border-color:var(--mint);}
+  .provider .lock{margin-left:auto; font-size:11px; color:var(--muted); font-weight:700;}
+  /* scanning */
+  #scanning{background:var(--indigo); color:#fff; align-items:center; justify-content:center;}
+  .ring{width:170px; height:170px; border-radius:50%; display:grid; place-items:center; position:relative;
+    background:conic-gradient(var(--coral) var(--p,0%), rgba(255,255,255,.12) 0);}
+  .ring::after{content:""; position:absolute; inset:12px; border-radius:50%; background:var(--indigo);}
+  .ring .num{position:relative; z-index:2; font-size:40px; font-weight:800;}
+  .scanline{display:flex; align-items:center; gap:10px; color:#D9D5EE; font-size:14px; padding:7px 0; opacity:.4; transition:.3s;}
+  .scanline.done{opacity:1; color:#fff;} .scanline.active{opacity:1; color:var(--amber); font-weight:700;}
+  .scanline .dot{width:20px; height:20px; border-radius:50%; background:rgba(255,255,255,.15); display:grid; place-items:center; font-size:12px;}
+  .scanline.done .dot{background:var(--mint);}
+  /* misc */
+  .statpill{background:var(--panel); border-radius:16px; padding:14px 16px;}
+  .statpill .big{font-size:24px; font-weight:800;}
+  .divider{height:1px; background:var(--line); margin:18px 0;}
+  .toast{position:absolute; left:20px; right:20px; bottom:34px; background:var(--ink); color:#fff; padding:14px 16px;
+    border-radius:14px; font-size:13.5px; font-weight:600; z-index:80; opacity:0; transform:translateY(20px); transition:.3s; display:flex; gap:10px; align-items:center;}
+  .toast.show{opacity:1; transform:none;}
+  .sizeopt{flex:1; text-align:center; padding:12px 6px; border:1.5px solid var(--line); border-radius:13px; cursor:pointer; font-size:13px; font-weight:700; color:var(--ink);}
+  .sizeopt.sel{border-color:var(--coral); background:#FFF4F0; color:var(--coral);}
+  .confetti{position:absolute; width:9px; height:14px; top:-20px; border-radius:2px; animation:fall linear forwards;}
+  @keyframes fall{to{transform:translateY(900px) rotate(540deg); opacity:.2;}}
+  .label{font-size:11px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted);}
+  .back{background:none; border:none; font-size:22px; cursor:pointer; color:var(--ink); width:40px; height:40px; display:grid; place-items:center; margin-left:-8px;}
+  .hint{position:fixed; bottom:18px; left:50%; transform:translateX(-50%); color:#b9b3d6; font-size:12.5px; text-align:center; z-index:5;}
+  .sidecard{color:#cfc9ea; max-width:300px; align-self:center;}
+  .sidecard h3{color:#fff; font-size:20px; margin-bottom:14px;}
+  .sidecard p{font-size:14px; line-height:1.6; margin-bottom:14px;}
+  .sidecard .k{color:var(--amber); font-weight:700;}
+  @media (max-width:760px){.sidecard{display:none;}}
+</style>
+</head>
+<body>
+
+<!-- explainer beside phone (hidden on small screens) -->
+<div class="sidecard">
+  <h3>MemoryFlow — clickable prototype</h3>
+  <p>This is a tappable demo of the MVP. Everything is mock data, but the <span class="k">flow, look and feel</span> are real.</p>
+  <p><span class="k">Try this path:</span> Get started → connect Google Photos → watch the AI scan → open an album → create a canvas → checkout → see the viral share.</p>
+  <p>Tap around freely. Use the bottom tabs to jump between Home, Gifts and Profile.</p>
+</div>
+
+<div class="phone">
+  <div class="notch"></div>
+  <div class="statusbar dark" id="statusbar"><span>9:41</span><span class="right">5G ▦ 🔋</span></div>
+  <div class="viewport">
+
+    <!-- ================= WELCOME ================= -->
+    <section class="screen active" id="welcome">
+      <div class="body pad" style="padding-top:70px; display:flex; flex-direction:column;">
+        <div class="mosaic" style="margin-bottom:34px;">
+          <div style="background:var(--coral)"></div><div style="background:var(--violet)"></div>
+          <div style="background:var(--amber)"></div><div style="background:var(--mint)"></div>
+          <div style="background:var(--violet)"></div><div style="background:var(--amber)"></div>
+          <div style="background:var(--mint)"></div><div style="background:var(--coral)"></div>
+        </div>
+        <div class="eyebrow" style="margin-bottom:14px;">AI Memory Concierge</div>
+        <h1 style="color:#fff; font-size:38px;">MemoryFlow</h1>
+        <p style="color:#C9C4E4; font-size:16.5px; line-height:1.55; margin-top:16px;">
+          Your photos are scattered across a dozen apps. We organize them and turn them into
+          <span style="color:var(--amber); font-weight:700;">albums, gifts and memories — automatically.</span></p>
+        <div style="flex:1;"></div>
+        <button class="btn btn-primary" onclick="go('connect')" style="margin-bottom:12px;">Get started →</button>
+        <button class="btn" style="background:transparent; color:#9A95B5;" onclick="go('connect')">I already have an account</button>
+        <div style="height:24px;"></div>
+      </div>
+    </section>
+
+    <!-- ================= CONNECT ================= -->
+    <section class="screen" id="connect">
+      <div class="body" style="padding-top:54px;">
+        <div class="pad">
+          <div class="eyebrow" style="margin-bottom:10px;">Step 1 of 2</div>
+          <h2>Connect your photos</h2>
+          <p class="sub" style="margin:8px 0 20px;">Link one account to start. We never delete or move your originals — we only read them to organize.</p>
+        </div>
+        <div class="pad" style="display:flex; flex-direction:column; gap:11px;">
+          <div class="provider" onclick="toggleProv(this,'gphotos')">
+            <div class="logo" style="background:#4285F4;">📷</div>
+            <div><div style="font-weight:700;">Google Photos</div><div class="sub" style="font-size:12.5px;">~4,500 photos & videos</div></div>
+            <div class="toggle">✓</div>
+          </div>
+          <div class="provider" onclick="toggleProv(this,'gmail')">
+            <div class="logo" style="background:#EA4335;">✉️</div>
+            <div><div style="font-weight:700;">Gmail attachments</div><div class="sub" style="font-size:12.5px;">Photos hiding in your inbox</div></div>
+            <div class="toggle">✓</div>
+          </div>
+          <div class="provider" style="opacity:.7;">
+            <div class="logo" style="background:#A2AAAD;"></div>
+            <div><div style="font-weight:700;">iCloud Photos</div><div class="sub" style="font-size:12.5px;">Coming soon</div></div>
+            <div class="lock">SOON</div>
+          </div>
+          <div class="provider" style="opacity:.7;">
+            <div class="logo" style="background:#0061FF;">📦</div>
+            <div><div style="font-weight:700;">Dropbox</div><div class="sub" style="font-size:12.5px;">Coming soon</div></div>
+            <div class="lock">SOON</div>
+          </div>
+          <div class="provider" style="opacity:.7;">
+            <div class="logo" style="background:#1877F2;">f</div>
+            <div><div style="font-weight:700;">Facebook</div><div class="sub" style="font-size:12.5px;">Coming soon</div></div>
+            <div class="lock">SOON</div>
+          </div>
+        </div>
+      </div>
+      <div class="pad" style="padding-bottom:24px; padding-top:12px; border-top:1px solid var(--line);">
+        <button class="btn btn-primary" id="connectBtn" disabled onclick="startScan()">Connect a source to continue</button>
+        <p class="sub" style="font-size:11.5px; text-align:center; margin-top:10px;">🔒 GDPR-compliant · revoke access anytime</p>
+      </div>
+    </section>
+
+    <!-- ================= SCANNING ================= -->
+    <section class="screen" id="scanning">
+      <div class="body" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 30px; text-align:center;">
+        <div class="ring" id="ring"><div class="num" id="ringNum">0%</div></div>
+        <h2 style="color:#fff; margin-top:28px;" id="scanTitle">Organizing your memories…</h2>
+        <p style="color:#BDB8DC; font-size:14px; margin-top:6px;" id="scanCount">Scanning 4,532 photos</p>
+        <div style="width:100%; max-width:300px; margin-top:26px; text-align:left;">
+          <div class="scanline" data-i="0"><div class="dot">1</div><span>Removing duplicates &amp; blurry shots</span></div>
+          <div class="scanline" data-i="1"><div class="dot">2</div><span>Detecting faces, pets &amp; places</span></div>
+          <div class="scanline" data-i="2"><div class="dot">3</div><span>Grouping into events &amp; trips</span></div>
+          <div class="scanline" data-i="3"><div class="dot">4</div><span>Picking your best shots</span></div>
+          <div class="scanline" data-i="4"><div class="dot">5</div><span>Designing gift ideas</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= HOME ================= -->
+    <section class="screen" id="home">
+      <div class="body" style="padding-top:54px;">
+        <div class="pad" style="display:flex; align-items:center; justify-content:space-between;">
+          <div>
+            <div class="sub" style="font-size:13px;">Good evening, Ahile</div>
+            <h2 style="margin-top:2px;">Your memories</h2>
+          </div>
+          <div style="width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,var(--violet),var(--coral)); display:grid; place-items:center; color:#fff; font-weight:800;" onclick="go('profile'); setNav('profile')">A</div>
+        </div>
+
+        <div class="pad" style="margin-top:16px;">
+          <div class="row" style="background:var(--indigo); border-radius:18px; padding:16px 18px; color:#fff;">
+            <div>
+              <div style="font-size:13px; color:#BDB8DC;">We organized everything</div>
+              <div style="font-weight:800; font-size:19px; margin-top:2px;">4,532 photos → 18 smart albums</div>
+            </div>
+            <div style="margin-left:auto; font-size:26px;">✨</div>
+          </div>
+        </div>
+
+        <div class="pad" style="margin-top:22px; display:flex; justify-content:space-between; align-items:baseline;">
+          <div class="label">Smart albums</div>
+          <div style="font-size:12.5px; font-weight:700; color:var(--coral);">See all</div>
+        </div>
+        <div class="pad" style="margin-top:12px;">
+          <div class="grid2" id="albumGrid"></div>
+        </div>
+
+        <div class="pad" style="margin-top:24px;">
+          <div class="row" style="justify-content:space-between; align-items:center; background:linear-gradient(120deg,var(--coral),var(--amber)); border-radius:18px; padding:18px; color:#fff; cursor:pointer;" onclick="go('suggestions'); setNav('gifts')">
+            <div>
+              <div style="font-weight:800; font-size:16px;">🎁 3 gift ideas ready</div>
+              <div style="font-size:12.5px; opacity:.92; margin-top:3px;">AI designed these from your best shots</div>
+            </div>
+            <div style="font-size:22px;">→</div>
+          </div>
+        </div>
+        <div style="height:24px;"></div>
+      </div>
+      <div class="nav" id="nav"></div>
+    </section>
+
+    <!-- ================= ALBUM DETAIL ================= -->
+    <section class="screen" id="album">
+      <div class="body" style="padding-top:50px;">
+        <div class="pad row"><button class="back" onclick="go('home')">←</button></div>
+        <div style="position:relative; margin-top:4px;">
+          <img id="albumHero" class="tile" style="width:100%; height:230px; border-radius:0;">
+          <div style="position:absolute; bottom:14px; left:22px; color:#fff;">
+            <div class="chip" style="background:rgba(255,255,255,.9); margin-bottom:8px;">✨ Auto-created</div>
+            <div id="albumTitle" style="font-size:26px; font-weight:800; text-shadow:0 2px 12px rgba(0,0,0,.5);">Italy 2024</div>
+            <div id="albumCount" style="font-size:13px; opacity:.9;">312 photos · 47 best shots</div>
+          </div>
+        </div>
+        <div class="pad" style="margin-top:18px;">
+          <div class="label" style="margin-bottom:10px;">Best of this album</div>
+          <div class="grid3" id="albumGallery"></div>
+        </div>
+        <div class="pad" style="margin-top:20px; padding-bottom:24px;">
+          <button class="btn btn-primary" onclick="openProduct('canvas','Italy 2024')">🎁 Turn this into a gift</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SUGGESTIONS (GIFTS) ================= -->
+    <section class="screen" id="suggestions">
+      <div class="body" style="padding-top:54px;">
+        <div class="pad">
+          <div class="eyebrow">Made for you</div>
+          <h2 style="margin-top:8px;">Gift ideas from your photos</h2>
+          <p class="sub" style="margin-top:6px;">Our AI designed these automatically. Tap to preview &amp; order — your print partner ships it.</p>
+        </div>
+        <div class="pad" style="margin-top:18px; display:flex; flex-direction:column; gap:16px;" id="prodList"></div>
+        <div style="height:24px;"></div>
+      </div>
+      <div class="nav" id="nav2"></div>
+    </section>
+
+    <!-- ================= PRODUCT DETAIL ================= -->
+    <section class="screen" id="product">
+      <div class="body" style="padding-top:50px;">
+        <div class="pad row"><button class="back" onclick="go('suggestions')">←</button></div>
+        <div style="position:relative; margin-top:4px; padding:0 22px;">
+          <div style="background:var(--panel); border-radius:20px; padding:26px; display:grid; place-items:center;">
+            <div style="position:relative; padding:14px; background:#fff; box-shadow:0 18px 40px rgba(27,21,51,.22); transform:rotate(-1.5deg);">
+              <img id="prodHero" class="tile" style="width:210px; height:158px; border-radius:2px;">
+            </div>
+          </div>
+        </div>
+        <div class="pad" style="margin-top:20px;">
+          <div class="chip" style="margin-bottom:10px;">✨ AI-designed layout</div>
+          <h2 id="prodName">Italy 2024 Canvas</h2>
+          <p class="sub" style="margin-top:6px;" id="prodDesc">A 40×30cm gallery-wrap canvas built from the 6 best shots of your trip.</p>
+
+          <div class="label" style="margin:20px 0 10px;">Choose a size</div>
+          <div class="row" style="gap:9px;">
+            <div class="sizeopt" onclick="selSize(this,29)">30×20<br><span style="color:var(--muted); font-weight:600;">€29</span></div>
+            <div class="sizeopt sel" onclick="selSize(this,49)">40×30<br><span style="color:var(--muted); font-weight:600;">€49</span></div>
+            <div class="sizeopt" onclick="selSize(this,79)">60×40<br><span style="color:var(--muted); font-weight:600;">€79</span></div>
+          </div>
+        </div>
+        <div style="height:20px;"></div>
+      </div>
+      <div class="pad" style="padding-bottom:24px; padding-top:14px; border-top:1px solid var(--line);">
+        <div class="row" style="justify-content:space-between; margin-bottom:12px;">
+          <span class="sub">Total</span>
+          <span class="price" style="font-size:22px;" id="prodPrice">€49</span>
+        </div>
+        <button class="btn btn-primary" onclick="go('checkout')">Order this gift →</button>
+        <p class="sub" style="font-size:11.5px; text-align:center; margin-top:9px;">Fulfilled &amp; shipped by our print partner</p>
+      </div>
+    </section>
+
+    <!-- ================= CHECKOUT ================= -->
+    <section class="screen" id="checkout">
+      <div class="body" style="padding-top:50px;">
+        <div class="pad row"><button class="back" onclick="go('product')">←</button></div>
+        <div class="pad" style="margin-top:6px;">
+          <h2>Checkout</h2>
+          <div class="row" style="background:var(--panel); border-radius:14px; padding:11px 14px; margin-top:14px; font-size:12.5px; color:var(--violet-d); font-weight:700;">
+            🤝 Securely handed off to <b style="margin:0 4px;">Gelato</b> — our print &amp; shipping partner
+          </div>
+
+          <div class="row" style="margin-top:20px; gap:14px;">
+            <img id="coThumb" class="tile" style="width:70px; height:55px;">
+            <div><div style="font-weight:700;" id="coName">Italy 2024 Canvas</div><div class="sub" style="font-size:12.5px;">40×30cm gallery wrap</div></div>
+            <div class="price" style="margin-left:auto;" id="coPrice">€49</div>
+          </div>
+          <div class="divider"></div>
+
+          <div class="label" style="margin-bottom:12px;">Shipping to</div>
+          <div style="border:1.5px solid var(--line); border-radius:14px; padding:14px; font-size:14px;">
+            Ahile<br><span class="sub">12 Rue des Souvenirs · 75011 Paris · FR</span>
+          </div>
+
+          <div class="label" style="margin:20px 0 12px;">Payment</div>
+          <div style="border:1.5px solid var(--line); border-radius:14px; padding:14px; font-size:14px;" class="row">
+            <span style="font-size:18px;">💳</span> Visa ···· 4242 <span class="sub" style="margin-left:auto;">Edit</span>
+          </div>
+
+          <div class="row" style="justify-content:space-between; margin-top:22px;">
+            <span class="sub">Item</span><span style="font-weight:600;" id="coItem">€49.00</span></div>
+          <div class="row" style="justify-content:space-between; margin-top:8px;">
+            <span class="sub">Shipping</span><span style="font-weight:600;">€4.90</span></div>
+          <div class="row" style="justify-content:space-between; margin-top:12px; padding-top:12px; border-top:1px solid var(--line);">
+            <span style="font-weight:800;">Total</span><span class="price" style="font-size:20px;" id="coTotal">€53.90</span></div>
+        </div>
+        <div style="height:18px;"></div>
+      </div>
+      <div class="pad" style="padding-bottom:24px; padding-top:14px; border-top:1px solid var(--line);">
+        <button class="btn btn-dark" onclick="placeOrder()">Pay €53.90</button>
+      </div>
+    </section>
+
+    <!-- ================= SUCCESS / SHARE ================= -->
+    <section class="screen" id="success" style="background:var(--indigo);">
+      <div class="body" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px 30px; color:#fff;">
+        <div style="width:84px; height:84px; border-radius:50%; background:var(--mint); display:grid; place-items:center; font-size:42px; margin-bottom:24px;">✓</div>
+        <h1 style="color:#fff; font-size:28px;">Order placed!</h1>
+        <p style="color:#C9C4E4; margin-top:10px; font-size:15px;">Your canvas is on its way. You'll get tracking by email.</p>
+
+        <div style="background:var(--indigo2); border-radius:20px; padding:24px; margin-top:30px; width:100%;">
+          <div style="font-size:13px; color:var(--amber); font-weight:800; letter-spacing:1px;">THE MAGIC</div>
+          <p style="font-size:19px; line-height:1.4; margin-top:12px; color:#fff;">
+            “Your canvas was created from <span style="color:var(--amber); font-weight:800;">4,532 photos</span> automatically.”</p>
+          <button class="btn btn-primary" style="margin-top:20px;" onclick="toast('Shared! Your friends will be curious 👀')">📤 Share how it was made</button>
+        </div>
+
+        <button class="btn" style="background:transparent; color:#9A95B5; margin-top:18px;" onclick="go('home'); setNav('home')">Back to my memories</button>
+      </div>
+    </section>
+
+    <!-- ================= PROFILE ================= -->
+    <section class="screen" id="profile">
+      <div class="body" style="padding-top:54px;">
+        <div class="pad" style="text-align:center;">
+          <div style="width:74px; height:74px; border-radius:50%; background:linear-gradient(135deg,var(--violet),var(--coral)); display:grid; place-items:center; color:#fff; font-weight:800; font-size:30px; margin:0 auto;">A</div>
+          <h2 style="margin-top:14px;">Ahile</h2>
+          <p class="sub">woopsahile@gmail.com</p>
+          <div class="chip" style="margin-top:12px; background:#FFF4F0; color:var(--coral);">Free plan · 1 account</div>
+        </div>
+
+        <div class="pad" style="margin-top:24px;">
+          <div style="background:linear-gradient(120deg,var(--violet),var(--violet-d)); border-radius:20px; padding:22px; color:#fff;">
+            <div style="font-weight:800; font-size:18px;">Go Premium — €4.99/mo</div>
+            <p style="font-size:13px; opacity:.9; margin-top:8px; line-height:1.5;">Unlimited accounts · full AI organization · family sharing · AI restore &amp; enhance.</p>
+            <button class="btn" style="background:#fff; color:var(--violet-d); margin-top:16px;" onclick="toast('Upgrade flow — coming in the build 🚀')">Upgrade</button>
+          </div>
+        </div>
+
+        <div class="pad" style="margin-top:22px;">
+          <div class="label" style="margin-bottom:6px;">Connected accounts</div>
+          <div class="row" style="padding:13px 2px; border-bottom:1px solid var(--line);"><span style="font-size:18px;">📷</span> Google Photos <span class="chip" style="margin-left:auto; background:#F0FBF9; color:var(--mint);">Active</span></div>
+          <div class="row" style="padding:13px 2px;"><span style="font-size:18px;">✉️</span> Gmail <span class="sub" style="margin-left:auto;">Connect</span></div>
+        </div>
+        <div style="height:24px;"></div>
+      </div>
+      <div class="nav" id="nav3"></div>
+    </section>
+
+  </div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<div class="hint">Self-contained prototype · mock data · tap anything</div>
+
+<script>
+/* ---------- data ---------- */
+const ALBUMS = [
+  {id:'italy', t:'Italy 2024', c:'312 photos', seed:'italy7', badge:'Trip'},
+  {id:'baby',  t:"Baby's first year", c:'604 photos', seed:'baby4', badge:'People'},
+  {id:'dog',   t:'Biscuit 🐶', c:'188 photos', seed:'dog9', badge:'Pet'},
+  {id:'family',t:'Mom & Dad', c:'421 photos', seed:'family3', badge:'People'},
+  {id:'best',  t:'Best of 2025', c:'50 photos', seed:'sunset2', badge:'Best-of'},
+  {id:'wed',   t:'The wedding', c:'733 photos', seed:'wedding5', badge:'Event'},
+];
+const PRODUCTS = [
+  {id:'canvas', name:'Italy 2024 Canvas', desc:'40×30cm gallery wrap from your 6 best trip shots', price:49, seed:'italy7', tag:'Wall canvas'},
+  {id:'book',   name:"Baby's First Year book", desc:'28-page hardcover photo book, auto-laid-out', price:39, seed:'baby4', tag:'Photo book'},
+  {id:'mug',    name:'Biscuit mug', desc:'Ceramic mug featuring your dog’s best portrait', price:15, seed:'dog9', tag:'Gift'},
+];
+const img = (seed,w,h)=>`https://picsum.photos/seed/${seed}/${w}/${h}`;
+function withFallback(el){ el.onerror=()=>{el.onerror=null; el.removeAttribute('src'); el.style.background='linear-gradient(135deg,var(--violet),var(--coral))';}; }
+
+/* ---------- navigation ---------- */
+const darkScreens = ['welcome','scanning','success'];
+function go(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el = document.getElementById(id); el.classList.add('active');
+  el.querySelector('.body').scrollTop = 0;
+  const sb = document.getElementById('statusbar');
+  sb.className = 'statusbar ' + (darkScreens.includes(id)?'dark':'light');
+}
+const NAV = [
+  {id:'home', ico:'🏠', label:'Home'},
+  {id:'suggestions', ico:'🎁', label:'Gifts'},
+  {id:'profile', ico:'👤', label:'Profile'},
+];
+function buildNav(container, current){
+  container.innerHTML = NAV.map(n=>`<button class="${n.id===current?'active':''}" onclick="go('${n.id}'); setNav('${n.id}')"><span class="ico">${n.ico}</span>${n.label}</button>`).join('');
+}
+function setNav(cur){ ['nav','nav2','nav3'].forEach(idc=>{const c=document.getElementById(idc); if(c) buildNav(c,cur);}); }
+
+/* ---------- connect ---------- */
+const connected = new Set();
+function toggleProv(el, key){
+  if(connected.has(key)){ connected.delete(key); el.classList.remove('on'); }
+  else { connected.add(key); el.classList.add('on'); }
+  const btn = document.getElementById('connectBtn');
+  if(connected.size>0){ btn.disabled=false; btn.textContent='Continue ('+connected.size+' connected) →'; }
+  else { btn.disabled=true; btn.textContent='Connect a source to continue'; }
+}
+
+/* ---------- scanning ---------- */
+function startScan(){
+  go('scanning');
+  const ring=document.getElementById('ring'), num=document.getElementById('ringNum');
+  const lines=[...document.querySelectorAll('#scanning .scanline')];
+  const titles=['Removing duplicates…','Detecting faces…','Grouping events…','Picking best shots…','Designing gifts…'];
+  let p=0, stage=0;
+  lines[0].classList.add('active');
+  const iv=setInterval(()=>{
+    p+=2; if(p>100)p=100;
+    ring.style.setProperty('--p', p+'%'); num.textContent=p+'%';
+    const ns = Math.min(4, Math.floor(p/20));
+    if(ns!==stage){
+      lines[stage].classList.remove('active'); lines[stage].classList.add('done');
+      lines[stage].querySelector('.dot').textContent='✓';
+      stage=ns; if(lines[stage]){lines[stage].classList.add('active'); document.getElementById('scanTitle').textContent=titles[stage];}
+    }
+    document.getElementById('scanCount').textContent = 'Processed '+Math.round(p/100*4532).toLocaleString()+' of 4,532 photos';
+    if(p>=100){
+      clearInterval(iv);
+      lines[4].classList.remove('active'); lines[4].classList.add('done'); lines[4].querySelector('.dot').textContent='✓';
+      document.getElementById('scanTitle').textContent='Your memories are ready ✨';
+      setTimeout(()=>{ setNav('home'); go('home'); }, 850);
+    }
+  }, 55);
+}
+
+/* ---------- render albums ---------- */
+function renderAlbums(){
+  document.getElementById('albumGrid').innerHTML = ALBUMS.map(a=>`
+    <div class="albumcard" onclick="openAlbum('${a.id}')">
+      <img src="${img(a.seed,400,400)}" onerror="this.style.opacity=0">
+      <span class="badge">${a.badge}</span>
+      <div class="ov"></div>
+      <div class="meta"><div class="t">${a.t}</div><div class="c">${a.c}</div></div>
+    </div>`).join('');
+}
+function openAlbum(id){
+  const a = ALBUMS.find(x=>x.id===id);
+  document.getElementById('albumHero').src = img(a.seed,700,500);
+  document.getElementById('albumTitle').textContent = a.t;
+  document.getElementById('albumCount').textContent = a.c + ' · best shots selected';
+  const g = document.getElementById('albumGallery');
+  g.innerHTML = Array.from({length:9}).map((_,i)=>`<img class="tile" style="aspect-ratio:1; width:100%;" src="${img(a.seed+'-'+i,250,250)}" onerror="this.style.opacity=.5">`).join('');
+  window._curAlbum = a;
+  go('album');
+}
+
+/* ---------- products ---------- */
+function renderProducts(){
+  document.getElementById('prodList').innerHTML = PRODUCTS.map(p=>`
+    <div class="prodcard" onclick="openProduct('${p.id}')">
+      <div class="top"><img src="${img(p.seed,500,375)}" onerror="this.style.opacity=.4"><span class="badge" style="top:12px; left:12px;">${p.tag}</span></div>
+      <div class="info"><div class="row" style="justify-content:space-between; align-items:flex-start;">
+        <div><div style="font-weight:800; font-size:15.5px;">${p.name}</div><div class="sub" style="font-size:12.5px; margin-top:3px;">${p.desc}</div></div>
+        <div class="price" style="white-space:nowrap; margin-left:10px;">€${p.price}</div></div>
+        <button class="btn btn-ghost" style="margin-top:12px; padding:11px; font-size:14px;">Preview &amp; order →</button>
+      </div></div>`).join('');
+}
+let curPrice = 49, curProd = PRODUCTS[0];
+function openProduct(id){
+  curProd = PRODUCTS.find(p=>p.id===id) || PRODUCTS[0];
+  document.getElementById('prodHero').src = img(curProd.seed,600,450);
+  document.getElementById('prodName').textContent = curProd.name;
+  document.getElementById('prodDesc').textContent = curProd.desc;
+  curPrice = curProd.price; document.getElementById('prodPrice').textContent='€'+curPrice;
+  // reset size selection to middle/default
+  document.querySelectorAll('#product .sizeopt').forEach((s,i)=>s.classList.toggle('sel', i===1));
+  go('product');
+}
+function selSize(el, price){
+  document.querySelectorAll('#product .sizeopt').forEach(s=>s.classList.remove('sel'));
+  el.classList.add('sel'); curPrice=price; document.getElementById('prodPrice').textContent='€'+price;
+}
+function placeOrder(){
+  go('success');
+  burst();
+}
+
+/* ---------- checkout sync ---------- */
+function syncCheckout(){
+  document.getElementById('coThumb').src = img(curProd.seed,200,160);
+  document.getElementById('coName').textContent = curProd.name;
+  document.getElementById('coPrice').textContent = '€'+curPrice;
+  document.getElementById('coItem').textContent = '€'+curPrice.toFixed?'':'';
+  const total = (curPrice+4.9).toFixed(2);
+  document.getElementById('coItem').textContent = '€'+curPrice+'.00';
+  document.getElementById('coTotal').textContent = '€'+total;
+  document.querySelector('#checkout .btn-dark').textContent = 'Pay €'+total;
+}
+/* hook checkout open */
+const _go = go;
+go = function(id){ if(id==='checkout') syncCheckout(); _go(id); };
+
+/* ---------- toast & confetti ---------- */
+let toastT;
+function toast(msg){
+  const t=document.getElementById('toast'); t.innerHTML='✅ '+msg; t.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2200);
+}
+function burst(){
+  const colors=['#FF7A59','#6C5CE7','#FFB454','#2EC4B6','#fff'];
+  const host=document.getElementById('success');
+  for(let i=0;i<28;i++){
+    const c=document.createElement('div'); c.className='confetti';
+    c.style.left=Math.random()*100+'%'; c.style.background=colors[i%colors.length];
+    c.style.animationDuration=(1.6+Math.random()*1.4)+'s'; c.style.animationDelay=(Math.random()*0.4)+'s';
+    host.appendChild(c); setTimeout(()=>c.remove(),3200);
+  }
+}
+
+/* ---------- init ---------- */
+renderAlbums(); renderProducts(); setNav('home');
+</script>
+</body>
+</html>

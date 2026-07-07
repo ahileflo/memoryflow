@@ -1,0 +1,29 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+pubspec.lock
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local env (used from Milestone 2 onward — never commit real secrets)
+.env
+.env.local
+
+# Environment-specific run script with project URL/keys
+run_backend.ps1
+
+# Keep the approved prototype out of the build but available locally
+# (comment this out if you want it versioned)
+# MemoryFlow — Interactive Prototype.html

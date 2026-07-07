@@ -1,0 +1,11 @@
+-- Seed data applied by `supabase db reset`.
+--
+-- The global product catalog is seeded inside the migration (so it exists in
+-- every environment). User-owned data (albums, photos, suggestions) is NOT
+-- seeded here because it requires a real auth.users row — it is created when a
+-- user signs in and runs import (Milestone 3) + AI organization (Milestone 4).
+--
+-- To explore the UI with rich data before then, run the app in mock mode
+-- (the default): it uses the in-memory MockRepository and needs no backend.
+
+-- (intentionally empty)

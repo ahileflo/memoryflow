@@ -1,0 +1,28 @@
+name: memoryflow
+description: "MemoryFlow — AI memory concierge + personalized gift marketplace. Milestone 1: runnable clickable app with in-memory mock data."
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management (per spec).
+  flutter_riverpod: ^2.5.1
+  # Declarative routing (per spec).
+  go_router: ^14.2.0
+  # Backend: Supabase (Auth, Postgres, Storage). Milestone 2.
+  supabase_flutter: ^2.8.0
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
