@@ -8,7 +8,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('MemoryFlow'), findsOneWidget);
-    expect(find.text('Get started →'), findsOneWidget);
+    expect(find.text('Try the demo →'), findsOneWidget);
     expect(find.text('AI MEMORY CONCIERGE'), findsOneWidget);
   });
 }

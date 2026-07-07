@@ -1,0 +1,23 @@
+name: Supabase keep-alive
+# Free-tier Supabase pauses projects after ~1 week without activity, which
+# would silently kill the public demo's waitlist. This pings the REST API
+# daily so the project stays awake. The key below is the PUBLISHABLE (anon)
+# key — safe to expose; Row Level Security protects all data.
+
+on:
+  schedule:
+    - cron: "17 6 * * *" # daily 06:17 UTC
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: sb_publishable_XMMn66NciDyC-ZnU-X55VA_m73djXuV" \
+            "https://arvtedmfvulxkuabduqq.supabase.co/rest/v1/")
+          echo "Supabase responded with HTTP $code"
+          # 200 = awake; anything else fails the job so it shows red in Actions.
+          [ "$code" = "200" ]
