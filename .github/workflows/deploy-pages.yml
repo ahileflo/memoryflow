@@ -1,0 +1,47 @@
+name: Deploy to GitHub Pages
+# Builds the Flutter web app in demo mode (USE_MOCK_DATA defaults to true, so no
+# backend secrets are needed) and publishes it on every push to main.
+# The clickable HTML prototype is published alongside it at /prototype.html.
+# One-time setup: Settings -> Pages -> Source: "GitHub Actions".
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Build Flutter web (demo mode)
+        run: |
+          flutter pub get
+          flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+      - name: Assemble site
+        run: |
+          cp -r build/web _site
+          cp "MemoryFlow — Interactive Prototype.html" _site/prototype.html
+          cp _site/index.html _site/404.html   # SPA fallback for deep links
+          touch _site/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
